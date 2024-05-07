@@ -1,0 +1,125 @@
+Sub StocksInfo():
+
+Dim input_row As Long ' row number
+Dim column_g_vol As Double 'column G
+Dim vol_total As Double 'column L
+Dim ticker As String 'column I
+
+Dim output_row As Long ' Leaderboard row
+
+Dim ticker_cls As Double 'ticker quarterly close price"
+Dim ticker_open As Double 'ticker quarterly open price"
+Dim quarterly_price_chg As Double 'quarterly price change
+Dim percent_chg As Double 'percent change in price
+
+Dim max_row As Integer 'used to find greatest increase
+Dim min_row As Integer 'used to find greatest decrease
+Dim total_volume As Integer 'greatest volume
+
+Dim ws As Worksheet 'define worksheets for looping
+
+Dim final_row As Long 'final row in worksheet
+
+'loop through worksheets
+For Each ws In Worksheets
+
+    'activate worksheet
+    ws.Activate
+    
+    'set final row
+    final_row = ActiveSheet.Cells(ActiveSheet.Rows.Count, 1).End(xlUp).Row
+
+    ' output extra columns: Repeat Ticker column, Add quarterly change, percent change, total stock volume
+    ws.Range("I1").Value = "Ticker"
+    ws.Range("J1").Value = "Quarterly Change"
+    ws.Range("K1").Value = "Percent Change"
+    ws.Range("L1").Value = "Volume"
+    
+    ' output extra columns: Repeat Ticker column, Add quarterly change, percent change, total stock volume
+    ' output Greatest increase, decrease and greates Total Volume
+    ws.Range("P1").Value = "Ticker"
+    ws.Range("Q1").Value = "Value"
+    ws.Range("O2").Value = "Greatest % Increase"
+    ws.Range("O3").Value = "Greatest % Decrease"
+    ws.Range("O4").Value = "Greatest Total Volume"
+    
+    'Initialize variables
+    output_row = 2
+    
+    ' Open for first ticker
+    ticker_open = ws.Cells(2, 3).Value
+     
+    
+    'Loop through all rows
+    For input_row = 2 To final_row:
+        
+    
+        column_g_vol = ws.Cells(input_row, 7).Value
+        ticker = ws.Cells(input_row, 1).Value
+        
+        'Do we have a different ticker?  does the new ticker match the old ticker that we populate  when we get a new ticker
+        If (ws.Cells(input_row + 1, 1).Value <> ticker) Then
+            'Different ticker
+            vol_total = vol_total + column_g_vol
+                    
+            'Since different ticker get closing price from column F which is column 6, calculate price change, percent change
+            ticker_cls = ws.Cells(input_row, 6).Value
+            quarterly_price_chg = ticker_cls - ticker_open
+            
+            'before dividing, make sure divisor is 0 not some weird data
+            If (ticker_open > 0) Then
+                percent_chg = quarterly_price_chg / ticker_open
+            Else
+                percent_chg = 0
+            End If
+            
+            'output data row
+            ws.Cells(output_row, 9).Value = ticker
+            ws.Cells(output_row, 10).Value = Format(quarterly_price_chg, "0.00######")
+            ws.Cells(output_row, 11).Value = percent_chg
+            ws.Cells(output_row, 12).Value = vol_total
+                    
+            'format cell colors price chg green > 0, Red < 0, Else White
+            If (quarterly_price_chg > 0) Then 'Green
+                ws.Cells(output_row, 10).Interior.ColorIndex = 4
+            ElseIf (quarterly_price_chg < 0) Then 'Red
+                ws.Cells(output_row, 10).Interior.ColorIndex = 3
+            Else 'White
+                ws.Cells(output_row, 10).Interior.ColorIndex = 2
+            End If
+            
+            'Reset numbers; cleanup for next calculations, populate next ticker open
+            vol_total = 0
+            output_row = output_row + 1
+            ticker_open = ws.Cells(input_row + 1, 3).Value
+        Else
+            'Same Ticker just add to the total continue until ticker changes
+            vol_total = vol_total + column_g_vol
+        End If
+    'Next row
+    Next input_row
+    
+    'Add cell formatting for percent and autofit
+    ws.Columns("J:J").NumberFormat = "0.00"  '2 decimals for all of column J
+    ws.Columns("K:K").NumberFormat = "0.00%" 'Percent and 2 decimals for all of column K
+    ws.Columns("I:Q").AutoFit 'Autofit column I through Q
+        
+    'find the greatest increase;decrease and total volume
+    ws.Range("Q2") = "%" & WorksheetFunction.Max(ws.Range("K2:K" & final_row)) * 100
+    ws.Range("Q3") = "%" & WorksheetFunction.Min(ws.Range("K2:K" & final_row)) * 100
+    
+    max_row = WorksheetFunction.Match(WorksheetFunction.Max(ws.Range("K2:K" & final_row)), ws.Range("K2:K" & final_row), 0)
+    ws.Range("P2") = ws.Cells(max_row + 1, 9)
+    ws.Range("Q4") = WorksheetFunction.Max(ws.Range("L2:L" & final_row))
+    
+    min_row = WorksheetFunction.Match(WorksheetFunction.Min(ws.Range("K2:K" & final_row)), ws.Range("K2:K" & final_row), 0)
+    ws.Range("P3") = ws.Cells(min_row + 1, 9)
+    
+    total_volume = WorksheetFunction.Match(WorksheetFunction.Max(ws.Range("L2:L" & final_row)), ws.Range("L2:L" & final_row), 0)
+    ws.Range("P4") = ws.Cells(total_volume + 1, 9)
+
+'next worksheet
+Next ws
+             
+End Sub
+
